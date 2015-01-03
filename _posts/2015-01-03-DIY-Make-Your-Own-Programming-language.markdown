@@ -585,10 +585,10 @@ yields:
 
 A list of statements.
 If we visualize this with pictures<sup><a href="#4">4</a></sup> it's obvious why this is called an abstract syntax tree (they are not connected so it's rather 4 trees).
-![Vardef a](http://i.imgur.com/vRiFQzk.png)
-![Assign a](http://i.imgur.com/7RWBpnr.png)
-![Vardef b](http://i.imgur.com/LFR7gw3.png)
-![Assign b](http://i.imgur.com/AlZsugx.png)
+![Vardef a](https://i.imgur.com/vRiFQzk.png)
+![Assign a](https://i.imgur.com/7RWBpnr.png)
+![Vardef b](https://i.imgur.com/LFR7gw3.png)
+![Assign b](https://i.imgur.com/AlZsugx.png)
 
 Let's take a look at a program that is more interesting. I mentioned it before and I'm sure you remember. Should `g` be `0` or `-10` after evaluation?
 
@@ -600,14 +600,14 @@ This should of course be parsed to:
     [Vardef(Id(g), Type(Int)),
      Assign(Id(g), Plus(Neg(LitInt(5)), LitInt(5)))]
 
-![Vardef g](http://i.imgur.com/hIqF0Zx.png)
-![Assign g](http://i.imgur.com/kf7v4iU.png)
+![Vardef g](https://i.imgur.com/hIqF0Zx.png)
+![Assign g](https://i.imgur.com/kf7v4iU.png)
 
 as this is how it's defined in mathematics but what decides this in the parser? Why isn't the assignment parsed as:
 
      Assign(Id(g), Neg(Plus(LitInt(5), LitInt(5))))
 
-![Assign g alt.](http://i.imgur.com/Tn0pT6s.png)
+![Assign g alt.](https://i.imgur.com/Tn0pT6s.png)
 
 The answer is called operator precedence. And if we take a second look on how the matching is done we will find out how this is determined.
 The first lines of `parse_expr`:
