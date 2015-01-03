@@ -3,7 +3,7 @@ layout: post
 title: "DIY: Make Your Own Programming Language"
 ---
 
-Let's create a programming language!
+This is part 1 in a series of blog posts that follow my work in creating a programming language.
 
 ## Why?
 
