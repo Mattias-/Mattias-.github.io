@@ -10,11 +10,11 @@ relative_permalinks: true
 title:            Mattias Appelgren
 tagline:          'What is this?'
 description:      '\f.(\x.f (x x)) (\x.f (x x))'
-url:              https://mattias-.github.io
+url:              http://blog.ppelgren.se
 baseurl:          /
 
 author:
   name:           'Mattias Appelgren'
-  url:            https://mattias-.github.io
+  url:            http://blog.ppelgren.se
 
 paginate:         5
