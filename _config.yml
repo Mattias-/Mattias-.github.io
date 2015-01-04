@@ -8,7 +8,7 @@ relative_permalinks: true
 
 # Setup
 title:            Mattias Appelgren
-tagline:          'What is this?'
+tagline:          'This is the blog'
 description:      '\f.(\x.f (x x)) (\x.f (x x))'
 url:              http://blog.ppelgren.se
 baseurl:          /

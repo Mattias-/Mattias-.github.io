@@ -26,6 +26,8 @@ This is part 1 in a series of blog posts that follow my work in creating a progr
   - Come up with some kind of syntax of the new language (AKA "concrete syntax")
   - Decide what should happen when running the code (This is actually called "operational semantics")
 
+<!--break-->
+
 That is all that's actually needed to create a programming language. However if you actually want a language to do something there must also exist an interpreter or a compiler for that language.
 To create a compiler we need to know some kind of lower level language that can be translated to machine code for [x86](http://en.wikibooks.org/wiki/X86_Assembly), [JVM](http://docs.oracle.com/javase/specs/jvms/se7/html/), [LLVM](http://llvm.org/docs/LangRef.html) or similar.
 An interpreter is much easier to make. Let's add "Implement features in an interpreter" to the iteration. Testing could also be useful.
