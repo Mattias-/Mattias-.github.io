@@ -24,7 +24,7 @@ This is part 1 in a series of blog posts that follow my work in creating a progr
 - Iterate:
   - Pick some sweet features
   - Come up with some kind of syntax of the new language (AKA "concrete syntax")
-  - Decide what should happen when running the code (This is actually called "operational semantics")
+  - Decide what should happen when running the code (This is actually called "~~operational~~ semantics")
 
 <!--break-->
 
@@ -39,7 +39,7 @@ An interpreter is much easier to make. Let's add "Implement features in an inter
 - Iterate:
   - Pick some sweet features
   - Come up with some kind of syntax of the new language (AKA "concrete syntax")
-  - Decide what should happen when running the code (This is actually called "operational semantics")
+  - Decide what should happen when running the code (This is actually called "~~operational~~ semantics")
   - **Implement the features in an interpreter**
   - **Test with some source code**
 
@@ -229,7 +229,7 @@ Invalid expressions
     a12 = 3 + b
 
 ### Semantics
-The operational semantics are straight forward at this point. I will not be very strict about the semantics and sometimes I'll come up with them after implementation so it will sometimes be 'This is how it works' rather than 'This is how it should work'. That won't be noticed very much in the blog posts though as they're written at the end of or after the whole iteration is done.
+The ~~operational~~ semantics are straight forward at this point. I will not be very strict about the semantics and sometimes I'll come up with them after implementation so it will sometimes be 'This is how it works' rather than 'This is how it should work'. That won't be noticed very much in the blog posts though as they're written at the end of or after the whole iteration is done.
 
 
 - **Variable declaration adds a note of what type the variable should have.** In C and Java the declaration usually initializes the variable to null or similar. I don't want that.
@@ -273,7 +273,7 @@ This is not the reason why I picked Rust though. I agree it is interesting but a
 #### It's time to write some code!
 First we need the interpreter to read the file with source code. Providing the filename as an argument seem reasonable.
 
-{% highlight rust %}
+```rust
 fn main() {
     let args = std::os::args();
     if args.len() < 2 {
@@ -282,38 +282,38 @@ fn main() {
     let path = Path::new(&args[1]);
     let s = File::open(&path).read_to_string().unwrap();
 }
-{% endhighlight %}
+```
 
 A simple preprocessor that splits up the file for all lines and throws away those who are empty. Don't worry about the `Line` type yet, it will be described later. Let's put this function next to `main` in a `main.rs` file.
 
-{% highlight rust %}
+```rust
 fn preprocess<'a>(s: &'a String) -> Vec<Line>{
     let mut res: Vec<Line> = vec![];
-    for line in s.as_slice().lines() {
+    for line in s.as_slice().lines_any() {
         match line {
             "" => {} // Discard empty lines
-            _ => res.push(Line(line))
+            _ => res.push(Line{content: line})
         }
     }
     return res;
 }
-{% endhighlight %}
+```
 
 #### The abstract representation
 Before we go further with the parser we need to come up with how the abstract syntax tree should be represented.
 Let's create a new file `abs.rs` with the following enums and structs.
 
-{% highlight rust %}
-#[deriving(Show, Clone)]
+```rust
+#[derive(Show, Clone)]
 pub struct Type(pub String);
 
-#[deriving(Show, Clone)]
+#[derive(Show, Clone)]
 pub enum Stm {
     Vardef(Expr, Type),
     Assign(Expr, Expr),
 }
 
-#[deriving(Show, Clone)]
+#[derive(Show, Clone)]
 pub enum Expr {
     Id(String),
     LitInt(int),
@@ -321,14 +321,14 @@ pub enum Expr {
     Plus(Box<Expr>, Box<Expr>),
     Minus(Box<Expr>, Box<Expr>)
 }
-{% endhighlight %}
+```
 
 Woah! Look at that. This will definitely make things easier as we can pattern match these things in a really clean way. `Box` is used for pointing as we can't have recursive types. The file can be found here: [abs.rs](https://github.com/Mattias-/ion/blob/iter1/src/abs.rs).
 
 #### The parser
 For the parser in `parser.rs` we're going to need two structs.
 
-{% highlight rust %}
+```rust
 struct ParseRule {
     name: String,
     regex: Regex,
@@ -336,12 +336,12 @@ struct ParseRule {
 pub struct Parser {
     rules: Vec<ParseRule>
 }
-{% endhighlight %}
+```
 
 A parse rule is a `String` with a name of what you get when matching the associated regular expression.
 The parser struct keeps track of all the rules. When a parser instance is created we set up all the rules.
 
-{% highlight rust %}
+```rust
 impl Parser {
 
     pub fn new() -> Parser {
@@ -378,20 +378,20 @@ impl Parser {
         return Parser {rules: rules};
     }
 }
-{% endhighlight %}
+```
 
 There are three interesting things happening here. First we got the basic building blocks for the patterns.
 
-{% highlight rust %}
+```rust
 let id = r"([:lower:][:alnum:]*)";
 let typ = r"([:upper:][:alnum:]*)";
 let litint = r"([:digit:]+)";
 let expr = r"(.*)";
-{% endhighlight %}
+```
 
 Then we got the list of all things we should be able to parse at the moment. First the name of the match and then a list that the regular expression will be created from.Having the pattern as a list that uses the earlier defined building blocks saves us a few keystrokes and make it less likely for typos.
 
-{% highlight rust %}
+```rust
 let parse_patterns = vec![
     ("Vardef", vec![id, r" :: ", typ]),
     ("Assign", vec![id, r" = ", expr]),
@@ -404,11 +404,11 @@ let parse_patterns = vec![
     ("Minus", vec![expr, r" - ", expr]),
     ("Neg", vec![r"-", expr]),
 ];
-{% endhighlight %}
+```
 
 Finally the rules are created. First the pattern parts are concatenated to a string and then a regular expression object is created from that. Now we got everything we need to create our `ParseRule`s to instantiate the `Parser`.
 
-{% highlight rust %}
+```rust
 let mut rules = vec![];
 for pp in parse_patterns.iter() {
     let (name, ref pattern_parts) = *pp;
@@ -422,37 +422,36 @@ for pp in parse_patterns.iter() {
     rules.push(ParseRule {name: String::from_str(name), regex: regex});
 }
 return Parser {rules: rules};
-{% endhighlight %}
+```
 
 Remember the `Line` type? It's a structure that represents a line of source code.
 
-{% highlight rust %}
-#[deriving(Show)]
-pub struct Line<'a>(pub &'a str);
-{% endhighlight %}
+```rust
+pub struct Line<'a> {
+    pub content: &'a str
+}
+```
 
 It doesn't do much now, but it could be useful in future iterations.
 The parser should of course have a parse function that parses these lines.
 
-{% highlight rust %}
+```rust
 pub fn parse(&self, s: Vec<Line>) -> Vec<Stm> {
     let mut res: Vec<Stm> = vec![];
     for line in s.iter() {
-        let Line(s) = *line;
-        let l = self.parse_stm(s);
+        let l = self.parse_stm((*line).content);
         res.push(l);
     }
     return res;
 }
-{% endhighlight %}
+```
 
 The source code is going be a bunch of statements, one for each line.
 To parse a statement we need a statement parser that returns an object of type `Stm`.
 
-{% highlight rust %}
+```rust
 fn parse_stm(&self, s: &str) -> Stm {
-    for rt in self.rules.iter() {
-        let ref rule = *rt;
+    for rule in self.rules.iter() {
         if rule.regex.is_match(s) {
             let c = rule.regex.captures(s).expect("No captures");
             return match rule.name.as_slice() {
@@ -464,14 +463,14 @@ fn parse_stm(&self, s: &str) -> Stm {
     }
     panic!("No match: {}", s);
 }
-{% endhighlight %}
+```
 
 Iterate over all the parse rules and see if something match either a `Vardef` or `Assign`. If there is a match we give the matched regular expression capture groups to functions that know how to create the right kind of `Stm`.
 
-{% highlight rust %}
+```rust
 fn vardef(&self, cap: Captures) -> Stm {
     let e = self.parse_expr(cap.at(1).unwrap());
-    let t = cap.at(2).and_then(from_str).unwrap();
+    let t = cap.at(2).and_then(FromStr::from_str).unwrap();
     return Vardef(e, Type(t));
 }
 
@@ -480,12 +479,12 @@ fn assign(&self, cap: Captures) -> Stm {
     let e2 = self.parse_expr(cap.at(2).unwrap());
     return Assign(e1, e2);
 }
-{% endhighlight %}
+```
 These functions use a `parse_expr` function which works just like `parse_stm` but returns a matched `Expr`.
-{% highlight rust %}
+
+```rust
 fn parse_expr(&self, s: &str) -> Expr {
-    for rt in self.rules.iter() {
-        let ref rule = *rt;
+    for rule in self.rules.iter() {
         if rule.regex.is_match(s) {
             let c = rule.regex.captures(s).expect("No captures");
             return match rule.name.as_slice() {
@@ -502,12 +501,12 @@ fn parse_expr(&self, s: &str) -> Expr {
 }
 
 fn id(&self, cap: Captures) -> Expr {
-    let s = cap.at(1).and_then(from_str).unwrap();
+    let s = cap.at(1).and_then(FromStr::from_str).unwrap();
     return Id(s);
 }
 
 fn litint(&self, cap: Captures) -> Expr {
-    let i = cap.at(1).and_then(from_str).unwrap();
+    let i = cap.at(1).and_then(FromStr::from_str).unwrap();
     return LitInt(i);
 }
 
@@ -527,19 +526,15 @@ fn minus(&self, cap: Captures) -> Expr {
     let e2 = self.parse_expr(cap.at(2).unwrap());
     return Minus(box e1, box e2);
 }
-{% endhighlight %}
+```
 
 Note that there's some recursion going on here as expressions can contain expressions.
 
 The parser is done and the source code can be found here: [parser.rs](https://github.com/Mattias-/ion/blob/iter1/src/parser.rs).
 
 Now we can use it in `main.rs`.
-{% highlight rust %}
-use parser::{Line, Parser};
 
-mod abs;
-mod parser;
-
+```rust
 fn main() {
     let args = std::os::args();
     if args.len() < 2 {
@@ -554,7 +549,7 @@ fn main() {
     let stms = p.parse(lines);
     println!("Parsed:\n{}\n", stms);
 }
-{% endhighlight %}
+```
 
 With a very simple file `g02.ion`:
 
@@ -614,7 +609,7 @@ as this is how it's defined in mathematics but what decides this in the parser? 
 The answer is called operator precedence. And if we take a second look on how the matching is done we will find out how this is determined.
 The first lines of `parse_expr`:
 
-{% highlight rust %}
+```rust
 for rt in self.rules.iter() {
     let ref rule = *rt;
     if rule.regex.is_match(s) {
@@ -622,12 +617,12 @@ for rt in self.rules.iter() {
     }
     ...
 }
-{% endhighlight %}
+```
 
 Ok, so this piece of code is going to try to match the patterns in the order they have in the list of rules.
 In the parse pattern list `Plus` is before `Neg` it is always going to be picked first => higher precedence. If `Neg` was put first we would end up with the alternative way of parsing these nested expressions.
 
-{% highlight rust %}
+```rust
 let parse_patterns = vec![
     ("Vardef", vec![id, r" :: ", typ]),
     ("Assign", vec![id, r" = ", expr]),
@@ -640,7 +635,7 @@ let parse_patterns = vec![
     ("Minus", vec![expr, r" - ", expr]),
     ("Neg", vec![r"-", expr]),
 ];
-{% endhighlight %}
+```
 
 #### No checking
 At the moment there is not much we can test with static checks. Type checking is not necessary as we only got one type. However there is one thing that we could check and that is if a variable exist or not.
@@ -653,8 +648,7 @@ This will fail since `b` does not exist. Implementing a static check for this co
 #### Execute statements, evaluate expressions
 Now it's time to start working on the evaluator. When a program is executed the interpreter keeps track of all variables and their values in the environment. This is definitely something we could use a data structure for.
 
-{% highlight rust %}
-#[deriving(Show)]
+```rust
 struct Env(HashMap<String, int>);
 
 impl Env {
@@ -673,13 +667,13 @@ impl Env {
         return *m.get(&id).expect("Undefined variable");
     }
 }
-{% endhighlight %}
+```
 
 Creating the `Env` struct might seem unnecessary since it is essentially a `HashMap`. That is true but it's to prepare for future functionality when scopes are added to the language.
 
 The `Eval` struct keeps track of a environment. Statements modify the environment and expressions use the environment to a value. Since we're only dealing with integers that's what `eval` return.
 
-{% highlight rust %}
+```rust
 pub struct Eval {
     env: Env,
 }
@@ -715,13 +709,13 @@ impl Eval {
         }
     }
 }
-{% endhighlight %}
+```
 
 This code is even more simple than the parser. That's because we've already done the messy parts. The fun things are happening here! Take a look at the complete file: [eval.rs](https://github.com/Mattias-/ion/blob/iter1/src/eval.rs).
 
-To tie things together we also need to add some stuff to `main` to execute all statemnts in the same environment.
+To tie things together we also need to add some stuff to `main` to execute all statements in the same environment.
 
-{% highlight rust %}
+```rust
 use parser::{Line, Parser};
 use eval::Eval;
 
@@ -749,7 +743,7 @@ fn main() {
     }
     e.print_env();
 }
-{% endhighlight %}
+```
 
 That's it. Check out: [main.rs](https://github.com/Mattias-/ion/blob/iter1/src/main.rs). Now all implementation is done for this iteration. When running an example program the interpreter is going to output the environment containing the values of all variables after all statements has been executed.
 
@@ -833,7 +827,12 @@ More posts is of course to come but until then please leave a comment if you got
 
 ---
 
-<sup id="1">1</sup><sub>There's no such thing. Languages got no speed as they are just syntax and operational semantics. Some implementations can be faster than other implementations though.</sub>
+##### Update(s):
+- **2015-01-05:** Minor code changes, typos, rephrasing.
+
+---
+
+<sup id="1">1</sup><sub>There's no such thing. Languages got no speed as they are just syntax and ~~operational~~ semantics. Some implementations can be faster than other implementations though.</sub>
 
 <sup id="2">2</sup><sub>Inspiration on how to name a language can be found [here](http://c2.com/cgi/wiki?ProgrammingLanguageNamingPatterns).</sub>
 
