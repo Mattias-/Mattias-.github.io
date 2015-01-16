@@ -116,9 +116,8 @@ You should be able to assign values more than once to a variable
     a1 = 222
     a1 = 333
 
-Declaring the same type to a variable should be permitted, as long as it's the same type. (Note that there's no notion of scopes in **ion** yet!)
+Declaring a variable but never using it should not give any errors.
 
-    a2 :: Int
     a2 :: Int
 
 #### Expression syntax
@@ -287,15 +286,15 @@ fn main() {
 A simple preprocessor that splits up the file for all lines and throws away those who are empty. Don't worry about the `Line` type yet, it will be described later. Let's put this function next to `main` in a `main.rs` file.
 
 ```rust
-fn preprocess<'a>(s: &'a String) -> Vec<Line>{
-    let mut res: Vec<Line> = vec![];
-    for line in s.as_slice().lines_any() {
-        match line {
-            "" => {} // Discard empty lines
-            _ => res.push(Line{content: line})
+fn preprocess(s: &str) -> Vec<Line>{
+    fn f(x: &str) -> Option<Line>{
+        if x == "" {
+            None
+        } else {
+            Some(Line{content: x})
         }
     }
-    return res;
+    s.lines_any().filter_map(f).collect()
 }
 ```
 
@@ -305,21 +304,21 @@ Let's create a new file `abs.rs` with the following enums and structs.
 
 ```rust
 #[derive(Show, Clone)]
-pub struct Type(pub String);
+pub struct Type<'a>(pub &'a str);
 
 #[derive(Show, Clone)]
-pub enum Stm {
-    Vardef(Expr, Type),
-    Assign(Expr, Expr),
+pub enum Stm<'a> {
+    Vardef(Expr<'a>, Type<'a>),
+    Assign(Expr<'a>, Expr<'a>),
 }
 
 #[derive(Show, Clone)]
-pub enum Expr {
-    Id(String),
-    LitInt(int),
-    Neg(Box<Expr>),
-    Plus(Box<Expr>, Box<Expr>),
-    Minus(Box<Expr>, Box<Expr>)
+pub enum Expr<'a> {
+    Id(&'a str),
+    LitInt(i32),
+    Neg(Box<Expr<'a>>),
+    Plus(Box<Expr<'a>>, Box<Expr<'a>>),
+    Minus(Box<Expr<'a>>, Box<Expr<'a>>)
 }
 ```
 
@@ -436,7 +435,7 @@ It doesn't do much now, but it could be useful in future iterations.
 The parser should of course have a parse function that parses these lines.
 
 ```rust
-pub fn parse(&self, s: Vec<Line>) -> Vec<Stm> {
+pub fn parse<'a>(&'a self, s: Vec<Line<'a>>) -> Vec<Stm> {
     let mut res: Vec<Stm> = vec![];
     for line in s.iter() {
         let l = self.parse_stm((*line).content);
@@ -450,7 +449,7 @@ The source code is going be a bunch of statements, one for each line.
 To parse a statement we need a statement parser that returns an object of type `Stm`.
 
 ```rust
-fn parse_stm(&self, s: &str) -> Stm {
+fn parse_stm<'a>(&'a self, s: &'a str) -> Stm {
     for rule in self.rules.iter() {
         if rule.regex.is_match(s) {
             let c = rule.regex.captures(s).expect("No captures");
@@ -468,13 +467,13 @@ fn parse_stm(&self, s: &str) -> Stm {
 Iterate over all the parse rules and see if something match either a `Vardef` or `Assign`. If there is a match we give the matched regular expression capture groups to functions that know how to create the right kind of `Stm`.
 
 ```rust
-fn vardef(&self, cap: Captures) -> Stm {
+fn vardef<'a>(&'a self, cap: Captures<'a>) -> Stm {
     let e = self.parse_expr(cap.at(1).unwrap());
-    let t = cap.at(2).and_then(FromStr::from_str).unwrap();
+    let t : &'a str = cap.at(2).unwrap();
     return Vardef(e, Type(t));
 }
 
-fn assign(&self, cap: Captures) -> Stm {
+fn assign<'a>(&'a self, cap: Captures<'a>) -> Stm {
     let e1 = self.parse_expr(cap.at(1).unwrap());
     let e2 = self.parse_expr(cap.at(2).unwrap());
     return Assign(e1, e2);
@@ -483,7 +482,7 @@ fn assign(&self, cap: Captures) -> Stm {
 These functions use a `parse_expr` function which works just like `parse_stm` but returns a matched `Expr`.
 
 ```rust
-fn parse_expr(&self, s: &str) -> Expr {
+fn parse_expr<'a >(&'a self, s: &'a str) -> Expr {
     for rule in self.rules.iter() {
         if rule.regex.is_match(s) {
             let c = rule.regex.captures(s).expect("No captures");
@@ -500,8 +499,8 @@ fn parse_expr(&self, s: &str) -> Expr {
     panic!("No match: {}", s);
 }
 
-fn id(&self, cap: Captures) -> Expr {
-    let s = cap.at(1).and_then(FromStr::from_str).unwrap();
+fn id<'a>(&'a self, cap: Captures<'a>) -> Expr {
+    let s : &'a str = cap.at(1).unwrap();
     return Id(s);
 }
 
@@ -510,18 +509,18 @@ fn litint(&self, cap: Captures) -> Expr {
     return LitInt(i);
 }
 
-fn neg(&self, cap: Captures) -> Expr {
+fn neg<'a>(&'a self, cap: Captures<'a>) -> Expr {
     let e = self.parse_expr(cap.at(1).unwrap());
     return Neg(box e);
 }
 
-fn plus(&self, cap: Captures) -> Expr {
+fn plus<'a>(&'a self, cap: Captures<'a>) -> Expr {
     let e1 = self.parse_expr(cap.at(1).unwrap());
     let e2 = self.parse_expr(cap.at(2).unwrap());
     return Plus(box e1, box e2);
 }
 
-fn minus(&self, cap: Captures) -> Expr {
+fn minus<'a>(&'a self, cap: Captures<'a>) -> Expr {
     let e1 = self.parse_expr(cap.at(1).unwrap());
     let e2 = self.parse_expr(cap.at(2).unwrap());
     return Minus(box e1, box e2);
@@ -543,11 +542,11 @@ fn main() {
     let path = Path::new(&args[1]);
     let s = File::open(&path).read_to_string().unwrap();
 
-    let lines = preprocess(&s);
+    let lines = preprocess(s.as_slice());
 
     let p = Parser::new();
     let stms = p.parse(lines);
-    println!("Parsed:\n{}\n", stms);
+    println!("Parsed:\n{:?}\n", stms);
 }
 ```
 
@@ -610,8 +609,7 @@ The answer is called operator precedence. And if we take a second look on how th
 The first lines of `parse_expr`:
 
 ```rust
-for rt in self.rules.iter() {
-    let ref rule = *rt;
+for rule in self.rules.iter() {
     if rule.regex.is_match(s) {
         ...
     }
@@ -649,20 +647,20 @@ This will fail since `b` does not exist. Implementing a static check for this co
 Now it's time to start working on the evaluator. When a program is executed the interpreter keeps track of all variables and their values in the environment. This is definitely something we could use a data structure for.
 
 ```rust
-struct Env(HashMap<String, int>);
+struct Env<'a>(HashMap<&'a str, i32>);
 
-impl Env {
+impl<'a> Env<'a> {
 
-    fn new() -> Env {
+    fn new() -> Env<'a> {
         return Env(HashMap::new());
     }
 
-    fn add(&mut self, id: String, value: int) {
+    fn add(&mut self, id: &'a str, value: i32) {
         let ref mut m = self.0;
         m.insert(id, value);
     }
 
-    fn lookup(&mut self, id:String) -> int {
+    fn lookup(&mut self, id: &'a str) -> i32 {
         let ref mut m = self.0;
         return *m.get(&id).expect("Undefined variable");
     }
@@ -674,32 +672,32 @@ Creating the `Env` struct might seem unnecessary since it is essentially a `Hash
 The `Eval` struct keeps track of a environment. Statements modify the environment and expressions use the environment to a value. Since we're only dealing with integers that's what `eval` return.
 
 ```rust
-pub struct Eval {
-    env: Env,
+pub struct Eval<'a> {
+    env: Env<'a>,
 }
 
-impl Eval {
+impl<'a> Eval<'a> {
 
-    pub fn new() -> Eval {
+    pub fn new() -> Eval<'a> {
         Eval {env: Env::new()}
     }
 
     pub fn print_env(&self) {
-        println!("Environment:\n{}", self.env);
+        println!("Environment:\n{:?}", self.env);
     }
 
-    pub fn exec_stm(&mut self, stm: Stm) {
+    pub fn exec_stm(&mut self, stm: Stm<'a>) {
         match stm {
             Vardef(Id(_), _) => {},
             Assign(Id(s), e) => {
                 let x = self.eval(e);
                 self.env.add(s, x)
             },
-            _ => panic!("Unknown stm: {} in exec", stm)
+            _ => panic!("Unknown stm: {:?} in exec", stm)
         };
     }
 
-    fn eval(&mut self, expr: Expr) -> int {
+    fn eval(&mut self, expr: Expr<'a>) -> i32 {
         match expr {
             Id(s) => self.env.lookup(s),
             LitInt(i) => i,
@@ -731,11 +729,11 @@ fn main() {
     let path = Path::new(&args[1]);
     let s = File::open(&path).read_to_string().unwrap();
 
-    let lines = preprocess(&s);
+    let lines = preprocess(s.as_slice());
 
     let p = Parser::new();
     let stms = p.parse(lines);
-    println!("Parsed:\n{}\n", stms);
+    println!("Parsed:\n{:?}\n", stms);
 
     let mut e = Eval::new();
     for stm in stms.iter() {
@@ -757,7 +755,6 @@ That's it. Check out: [main.rs](https://github.com/Mattias-/ion/blob/iter1/src/m
     a1 = 333
 
     a2 :: Int
-    a2 :: Int
 
     a3 :: Int
     a3 = 1 + 2 - 3 + 4
@@ -777,7 +774,6 @@ Output:
      Vardef(Id(a1), Type(Int)),
      Assign(Id(a1), LitInt(222)),
      Assign(Id(a1), LitInt(333)),
-     Vardef(Id(a2), Type(Int)),
      Vardef(Id(a2), Type(Int)),
      Vardef(Id(a3), Type(Int)),
      Assign(Id(a3), Plus(Plus(LitInt(1), Minus(LitInt(2), LitInt(3))), LitInt(4))),
