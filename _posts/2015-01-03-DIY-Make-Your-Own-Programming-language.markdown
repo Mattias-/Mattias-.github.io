@@ -825,6 +825,7 @@ More posts is of course to come but until then please leave a comment if you got
 
 ##### Update(s):
 - **2015-01-05:** Minor code changes, typos, rephrasing.
+- **2015-01-16:**  Refactored `String` to `&str`. Updated rust to `1.0.0-nightly (8903c21d6 2015-01-15 22:42:58 +0000)`
 
 ---
 
